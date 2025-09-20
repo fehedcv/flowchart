@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code to Flowchart Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        .api-key-input {
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #357abd;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .flowchart-container {
+            margin-top: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            background: white;
+            min-height: 200px;
+            display: none;
+        }
+
+        .mermaid {
+            text-align: center;
+        }
+
+        .instructions {
+            background: #f0f7ff;
+            border: 1px solid #b8d4f0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #2c5aa0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Code to Flowchart Generator</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <p>1. Paste your code in the text area</p>
+            <p>2. Click "Generate Flowchart" to see the visual representation</p>
+            <p><strong>Note:</strong> API key is configured in the code.</p>
+        </div>
+
+        <div class="input-section">
+            <label for="codeInput">Code to Analyze:</label>
+            <textarea 
+                id="codeInput" 
+                placeholder="Paste your code here...
+
+Example:
+count = 0
+while count < 5:
+    print(f'Count: {count}')
+    count += 1
+print('Done!')"></textarea>
+        </div>
+
+        <button id="generateBtn" onclick="generateFlowchart()">Generate Flowchart</button>
+
+        <div class="loading" id="loading">
+            <p>Analyzing code and generating flowchart...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="flowchart-container" id="flowchartContainer">
+            <h3>Generated Flowchart:</h3>
+            <div class="mermaid" id="mermaid-diagram"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'default',
+            flowchart: {
+                nodeSpacing: 50,
+                rankSpacing: 60,
+                curve: 'basis'
+            }
+        });
+
+        // Replace with your actual Gemini API key
+        const GEMINI_API_KEY = 'AIzaSyAv4bpwrhd9ZLpevGBLP8oIuNmSZLHyj5M';
+
+        async function generateFlowchart() {
+            const code = document.getElementById('codeInput').value.trim();
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const flowchartContainer = document.getElementById('flowchartContainer');
+            const generateBtn = document.getElementById('generateBtn');
+
+            // Reset UI
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'none';
+            flowchartContainer.style.display = 'none';
+
+            // Validation
+            if (!code) {
+                showError('Please enter code to analyze');
+                return;
+            }
+
+            // Show loading
+            loadingEl.style.display = 'block';
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Analyze the following code and create a structured flowchart representation.
+        Return only a JSON object with this structure:
+        {
+            "nodes": [
+                {"id": "start_node", "label": "Start", "type": "start"},
+                {"id": "input1", "label": "Get user input", "type": "input_output"},
+                {"id": "process1", "label": "x = 5", "type": "process"},
+                {"id": "decision1", "label": "x > 0?", "type": "decision"},
+                {"id": "output1", "label": "Display result", "type": "input_output"},
+                {"id": "end_node", "label": "End", "type": "end"}
+            ],
+            "edges": [
+                {"from": "start_node", "to": "input1"},
+                {"from": "input1", "to": "process1"},
+                {"from": "process1", "to": "decision1"},
+                {"from": "decision1", "to": "output1", "label": "Yes"},
+                {"from": "decision1", "to": "process1", "label": "No"},
+                {"from": "output1", "to": "end_node"}
+            ]
+        }
+        
+        Node types and usage:
+        - start/end: For program start and end points (use "start_node" and "end_node" as IDs)
+        - process: For assignments (x=5), calculations, function calls, increment operations
+        - decision: For if/else conditions, while/for loop conditions (use question format: "x > 0?")
+        - input_output: ONLY for input(), print(), file I/O operations
+        
+        Important rules:
+        1. Variable assignments like "count = 0" are PROCESS nodes, not input_output
+        2. Calculations and increments like "count += 1" are PROCESS nodes
+        3. Use "input_output" ONLY for actual I/O: input(), print(), file operations
+        4. Decision labels should be questions: "count < 5?", "x > 0?"
+        5. Use "Yes"/"No" or "True"/"False" for decision edge labels
+        6. Always use "start_node" and "end_node" as IDs (avoid reserved words)
+        7. Keep labels concise (under 20 characters)
+        8. The text inside nodes should be black and the shape background white
+        
+        Code to analyze:
+        ${code}`
+                            }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'API request failed');
+                }
+
+                const data = await response.json();
+                const generatedText = data.candidates[0].content.parts[0].text;
+                
+                // Extract JSON from the response
+                const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No valid JSON found in API response');
+                }
+
+                const flowchartData = JSON.parse(jsonMatch[0]);
+                
+                // Convert to Mermaid format
+                const mermaidCode = convertToMermaid(flowchartData);
+                
+                // Display the flowchart
+                displayFlowchart(mermaidCode);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Error: ${error.message}`);
+            } finally {
+                loadingEl.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        }
+
+        function convertToMermaid(data) {
+            let mermaidCode = 'flowchart TD\n';
+            
+            // Add nodes
+            data.nodes.forEach(node => {
+                let shape;
+                switch(node.type) {
+                    case 'start':
+                    case 'end':
+                        shape = `([${node.label}])`;
+                        break;
+                    case 'decision':
+                        shape = `{${node.label}}`;
+                        break;
+                    case 'process':
+                        shape = `[${node.label}]`;
+                        break;
+                    case 'input_output':
+                        shape = `[/${node.label}/]`;
+                        break;
+                    default:
+                        shape = `[${node.label}]`;
+                }
+                mermaidCode += `    ${node.id}${shape}\n`;
+            });
+            
+            mermaidCode += '\n';
+            
+            // Add edges
+            data.edges.forEach(edge => {
+                if (edge.label) {
+                    mermaidCode += `    ${edge.from} -->|${edge.label}| ${edge.to}\n`;
+                } else {
+                    mermaidCode += `    ${edge.from} --> ${edge.to}\n`;
+                }
+            });
+
+            // Add styling for white backgrounds and black text
+            mermaidCode += '\n';
+            mermaidCode += '    classDef default fill:#ffffff,stroke:#333333,stroke-width:2px,color:#000000\n';
+            
+            return mermaidCode;
+        }
+
+        async function displayFlowchart(mermaidCode) {
+            const diagramEl = document.getElementById('mermaid-diagram');
+            const flowchartContainer = document.getElementById('flowchartContainer');
+            
+            try {
+                // Clear previous diagram
+                diagramEl.innerHTML = '';
+                
+                // Generate new diagram
+                const { svg } = await mermaid.render('flowchart', mermaidCode);
+                diagramEl.innerHTML = svg;
+                
+                // Show container
+                flowchartContainer.style.display = 'block';
+                
+            } catch (error) {
+                showError(`Error rendering flowchart: ${error.message}`);
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        // Allow Enter key to submit when focused on code input
+        document.getElementById('codeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                generateFlowchart();
+            }
+        });
+    </script>
+</body>
+</html>
